@@ -100,13 +100,13 @@ class simplemodel(nn.Module):
            
     def forward(self,x,adj):#x:(b,len,fea_len)
         
-        outputlstm,(h,c)=self.lstm(x)#x:(b,len,fea1024);output:(b,len,fea256)
+        outputlstm,(h,c)=self.lstm(x)
         x=self.fc1(x)
         outputgat=self.gat(x,adj)
         #print(outputgat.shape)
         output=torch.cat([outputlstm,outputgat],dim=2)
 
-        output=torch.mean(output,dim=1)#output:(64,256)
+        output=torch.mean(output,dim=1)
         x=self.fc(output)
         return x
 
@@ -126,20 +126,18 @@ def normalize(mx):
 
 
 
-def padded_adj(original_matrix):#输入是（103，103）
-    #original_matrix = np.zeros((103, 103))
+def padded_adj(original_matrix):
     dim=original_matrix.shape[0]
-    # 创建一个512x512的零矩阵
+    
     if dim >=512:
         return original_matrix[:512,:512]
     else:
         padded_matrix = np.zeros((512, 512))
 
-    # 将原始矩阵的值复制到新的矩阵中
+    
         padded_matrix[:dim, :dim] = original_matrix
 
-    # 打印结果
-    # print(padded_matrix)
+    
         return padded_matrix
 
 
@@ -155,9 +153,7 @@ def load_graph(sequence_name):
     mask = ((dismap >= 0) * (dismap <= 14))
     
     adjacency_matrix = mask.astype(np.int)
-    # elif MAP_TYPE == "c":
-    #     adjacency_matrix = norm_dis(dismap)
-    #     adjacency_matrix = mask * adjacency_matrix
+    
 
     norm_matrix = normalize(adjacency_matrix.astype(np.float32))
     norm_matrix=padded_adj(norm_matrix).astype(np.float32)
@@ -182,13 +178,11 @@ def loadembedding(name):
         fea=padded_matrix
     return fea
 
-# def embeddingfea(namelist):
-#     batchfea=np.array([loadembedding(i) for i in namelist])
-#     return batchfea
 
 
 
-# model.train() 
+
+
 def train_one_epoch(model, data_loader):
     n=0
     epoch_loss_train=0
@@ -198,25 +192,9 @@ def train_one_epoch(model, data_loader):
         
         name,_,label, node_features, graph=data
 
-        # namelist=list(name)
 
-        # print(seq)#元组
-        # seqlist=list(seq)
-        # seqlist=[genstr(seq) for seq in seqlist]
-
-        # seq=np.array(seq)
-        # seq=torch.from_numpy(seq)
-        # seq=to_var(seq)
-        # label=to_var(label)#(64,514,1024)的张量截取（64，512，1024）
-
-        # embedding = embeddingfea(namelist)
-        # embedding = np.array(embedding)
         embedding=node_features
-        #embedding=torch.from_numpy(embedding)
 
-        #embedding=torch.squeeze(embedding)#????????
-
-        #embedding=embedding[:,1:-1,:]#获得（batch,512,1024）
         embedding=torch.tensor(embedding,dtype=torch.float)
         embedding=to_var(embedding)
 
@@ -236,7 +214,7 @@ def train_one_epoch(model, data_loader):
         n += 1
 
     epoch_loss_train_avg = epoch_loss_train / n
-    # print(epoch_loss_train_avg)
+    
     return epoch_loss_train_avg
 
 
@@ -324,30 +302,10 @@ def analysis(y_true, y_pred, best_threshold = None):
     }
     return results
 
-# LAYER = 8#8
-# INPUT_DIM = 1024
-# HIDDEN_DIM = 256
-# NUM_CLASSES = 2
-# DROPOUT = 0.1#0.1
-# LAMBDA = 1.5
-# ALPHA = 0.7
-# VARIANT = True
-# LEARNING_RATE = 1E-5
-# WEIGHT_DECAY = 0
 
 
 
 
-
-
-
-
-# trainset=pd.read_csv('/mnt/raid5/data3/xli/three_work/task3/new_train.csv')
-# trainset['label'] = trainset['label'].replace(-1, 0)
-# #train_loader = DataLoader(dataset=ProDataset(trainset), batch_size=1, shuffle=True, num_workers=2)
-
-# sequence_names = trainset['name'].values
-# sequence_labels = trainset['label'].values
 
 
 def gentraindataframe():#防止变量
@@ -360,9 +318,7 @@ def gentraindataframe():#防止变量
     with open(r'/home/xli/NABProt/task1ab/dataft/task1RNA_pos3948.pkl', 'rb') as f2:
         traintnegset2 = pickle.load(f2)
     
-    # print(traintest.keys())
-    # train_dataframe = pd.DataFrame(traintest)
-    # print(train_dataframe,)
+    
     trainposset={}
     trainposset.update(traintposset1)
     
@@ -374,10 +330,7 @@ def gentraindataframe():#防止变量
     labellist=[]
 
     for i in trainposlist:
-        # seqstr=trainset[i][0]
-        # label=trainset[i][1]
-        # seqlist.append(seqstr)
-        # labellist.append(1)
+       
         namelist.append(i)
         seqlist.append(trainposset[i])
         labellist.append(1)
@@ -423,10 +376,10 @@ for train_index, valid_index in kfold.split(sequence_names):
 
     if torch.cuda.is_available():
         model.cuda()
-#train_loader = Data.DataLoader(MyDataSet(train_enc_inputs, train_dec_inputs, train_dec_outputs), BATCH_SIZE, True,drop_last=True)
 
-    train_loader = DataLoader(dataset=ProDataset(train_dataframe), batch_size=64, shuffle=True, num_workers=2,drop_last=True)#,drop_last=True
-    valid_loader = DataLoader(dataset=ProDataset(valid_dataframe), batch_size=1, shuffle=True, num_workers=2)#,drop_last=True
+
+    train_loader = DataLoader(dataset=ProDataset(train_dataframe), batch_size=64, shuffle=True, num_workers=2,drop_last=True)
+    valid_loader = DataLoader(dataset=ProDataset(valid_dataframe), batch_size=1, shuffle=True, num_workers=2)
     
     foldlist=[]
 
