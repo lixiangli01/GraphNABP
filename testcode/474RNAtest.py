@@ -30,14 +30,12 @@ class ProDataset(Dataset):
     def __getitem__(self, index):
         sequence_name = self.names[index]
         sequence = self.sequences[index]
-        #label = np.array(self.labels[index])
+        
         label = self.labels[index]
 
-        # sequence_embedding = #embedding(sequence_name, sequence, EMBEDDING)
-        # #structural_features = #get_dssp_features(sequence_name)
+        
         graph = load_graph(sequence_name)
-        # #node_features = np.concatenate([sequence_embedding, structural_features], axis = 1)
-        # #graph = load_graph(sequence_name)
+        
         node_features=np.array(loadembedding(sequence_name))
 
         return sequence_name, sequence, label, node_features, graph
@@ -53,14 +51,12 @@ class ProDataTestset(Dataset):
     def __getitem__(self, index):
         sequence_name = self.names[index]
         sequence = self.sequences[index]
-        #label = np.array(self.labels[index])
+        
         label = self.labels[index]
 
-        # sequence_embedding = #embedding(sequence_name, sequence, EMBEDDING)
-        # #structural_features = #get_dssp_features(sequence_name)
+        
         graph = load_graph_test(sequence_name)
-        # #node_features = np.concatenate([sequence_embedding, structural_features], axis = 1)
-        # #graph = load_graph(sequence_name)
+        
         node_features=np.array(loadtestembedding(sequence_name))
 
         return sequence_name, sequence, label, node_features, graph
@@ -79,7 +75,7 @@ class net_prot_gat(nn.Module):
 
     def forward(self, x, adj):
         adj[:, list(range(512)), list(range(512))] = 1
-        for l in range(4):#7个头
+        for l in range(4):
             x0 = x
             adj_attn = self.sigmoid(torch.einsum('bij,bkj->bik', self.w_attn[l](x), x))
             adj_attn = adj_attn + 1e-5 * torch.eye(512).to(x.device)
@@ -91,7 +87,7 @@ class net_prot_gat(nn.Module):
             x = self.relu(self.linear0[l](x))
             x = self.relu(self.linear1[l](x))
 
-            # x += x0
+            
             x = x+x0
 
         x = self.linear_final(x)
@@ -100,7 +96,7 @@ class net_prot_gat(nn.Module):
 def load_graph_test(sequence_name):
 
     
-#    #dismap = np.load(Feature_Path + "distance_map/" + sequence_name + ".npy") 
+
     try:
         dismap = np.load( "/home/xli/NABProt/task1ab/dataft/testdata/AF2_474/" + sequence_name[1:] + ".npy")
     except:
@@ -109,9 +105,7 @@ def load_graph_test(sequence_name):
     mask = ((dismap >= 0) * (dismap <= 14))
     
     adjacency_matrix = mask.astype(np.int)
-    # elif MAP_TYPE == "c":
-    #     adjacency_matrix = norm_dis(dismap)
-    #     adjacency_matrix = mask * adjacency_matrix
+    
 
     norm_matrix = normalize(adjacency_matrix.astype(np.float32))
     norm_matrix=padded_adj(norm_matrix).astype(np.float32)
@@ -134,7 +128,7 @@ def loadtestembedding(name):
 class simplemodel(nn.Module):
     def __init__(self):
         super(simplemodel,self).__init__()
-        # self.hidden_dim=512
+        
         self.lstm=nn.LSTM(1024,128,batch_first=True,bidirectional=True,num_layers=2)
 
         self.gat = net_prot_gat()
@@ -149,25 +143,25 @@ class simplemodel(nn.Module):
                                         nn.Linear(32, 2))
 
         self.criterion = nn.CrossEntropyLoss()
-        #self.optimizer = torch.optim.SGD(self.parameters(),lr=0.001)
+        
         self.optimizer = torch.optim.Adam(self.parameters(),lr=0.001) 
            
-    def forward(self,x,adj):#x:(b,len,fea_len)
+    def forward(self,x,adj):
         
-        outputlstm,(h,c)=self.lstm(x)#x:(b,len,fea1024);output:(b,len,fea256)
+        outputlstm,(h,c)=self.lstm(x)
         x=self.fc1(x)
         outputgat=self.gat(x,adj)
-        #print(outputgat.shape)
+        
         output=torch.cat([outputlstm,outputgat],dim=2)
 
-        output=torch.mean(output,dim=1)#output:(64,256)
+        output=torch.mean(output,dim=1)
         x=self.fc(output)
         return x
 
 
 
 
-def norm_dis(mx): # from SPROF
+def norm_dis(mx): 
     return 2 / (1 + (np.maximum(mx, 4) / 4))
 
 def normalize(mx):
@@ -180,27 +174,26 @@ def normalize(mx):
 
 
 
-def padded_adj(original_matrix):#输入是（103，103）
-    #original_matrix = np.zeros((103, 103))
+def padded_adj(original_matrix):
+    
     dim=original_matrix.shape[0]
-    # 创建一个512x512的零矩阵
+    
     if dim >=512:
         return original_matrix[:512,:512]
     else:
         padded_matrix = np.zeros((512, 512))
 
-    # 将原始矩阵的值复制到新的矩阵中
+    
         padded_matrix[:dim, :dim] = original_matrix
 
-    # 打印结果
-    # print(padded_matrix)
+    
         return padded_matrix
 
 
 def load_graph(sequence_name):
 
     
-#    #dismap = np.load(Feature_Path + "distance_map/" + sequence_name + ".npy") 
+
 
     try:
         dismap = np.load( "/mnt/raid5/data3/xli/three_work/task1/distrain_DNA/" + sequence_name + ".npy")
@@ -209,9 +202,7 @@ def load_graph(sequence_name):
     mask = ((dismap >= 0) * (dismap <= 14))
     
     adjacency_matrix = mask.astype(np.int)
-    # elif MAP_TYPE == "c":
-    #     adjacency_matrix = norm_dis(dismap)
-    #     adjacency_matrix = mask * adjacency_matrix
+    
 
     norm_matrix = normalize(adjacency_matrix.astype(np.float32))
     norm_matrix=padded_adj(norm_matrix).astype(np.float32)
@@ -239,41 +230,19 @@ def loadembedding(name):
         fea=padded_matrix
     return fea
 
-# def embeddingfea(namelist):
-#     batchfea=np.array([loadembedding(i) for i in namelist])
-#     return batchfea
 
-
-
-# model.train() 
 def train_one_epoch(model, data_loader):
     n=0
     epoch_loss_train=0
     for data in data_loader:
         model.optimizer.zero_grad()
-        # optimizer.zero_grad()
+       
         
         name,_,label, node_features, graph=data
 
-        # namelist=list(name)
-
-        # print(seq)#元组
-        # seqlist=list(seq)
-        # seqlist=[genstr(seq) for seq in seqlist]
-
-        # seq=np.array(seq)
-        # seq=torch.from_numpy(seq)
-        # seq=to_var(seq)
-        # label=to_var(label)#(64,514,1024)的张量截取（64，512，1024）
-
-        # embedding = embeddingfea(namelist)
-        # embedding = np.array(embedding)
+        
         embedding=node_features
-        #embedding=torch.from_numpy(embedding)
-
-        #embedding=torch.squeeze(embedding)#????????
-
-        #embedding=embedding[:,1:-1,:]#获得（batch,512,1024）
+        
         embedding=torch.tensor(embedding,dtype=torch.float)
         embedding=to_var(embedding)
 
@@ -287,13 +256,13 @@ def train_one_epoch(model, data_loader):
         y_pred =model(embedding,graph)
         loss=model.criterion(y_pred, y_true)
         loss.backward()
-        # print(loss,n)
+        
         model.optimizer.step()
         epoch_loss_train += loss.item()
         n += 1
 
     epoch_loss_train_avg = epoch_loss_train / n
-    # print(epoch_loss_train_avg)
+    
     return epoch_loss_train_avg
 
 
@@ -311,9 +280,7 @@ def evaluate(model, data_loader):
     for data in data_loader:
         with torch.no_grad():
             name,_,label, node_features, graph=data
-            # namelist=list(name)
-
-            #embedding = embeddingfea(namelist)
+           
             embedding=node_features
             embedding=torch.tensor(embedding,dtype=torch.float)
             embedding=to_var(embedding)
@@ -359,7 +326,7 @@ def analysis(y_true, y_pred, best_threshold = None):
 
     binary_pred = [1 if pred >= best_threshold else 0 for pred in y_pred]
     binary_true = y_true
-    # binary evaluate
+    
     binary_acc = metrics.accuracy_score(binary_true, binary_pred)
     precision = metrics.precision_score(binary_true, binary_pred)
     recall = metrics.recall_score(binary_true, binary_pred)
@@ -381,33 +348,9 @@ def analysis(y_true, y_pred, best_threshold = None):
     }
     return results
 
-# LAYER = 8#8
-# INPUT_DIM = 1024
-# HIDDEN_DIM = 256
-# NUM_CLASSES = 2
-# DROPOUT = 0.1#0.1
-# LAMBDA = 1.5
-# ALPHA = 0.7
-# VARIANT = True
-# LEARNING_RATE = 1E-5
-# WEIGHT_DECAY = 0
 
 
-
-
-
-
-
-
-# trainset=pd.read_csv('/mnt/raid5/data3/xli/three_work/task3/new_train.csv')
-# trainset['label'] = trainset['label'].replace(-1, 0)
-# #train_loader = DataLoader(dataset=ProDataset(trainset), batch_size=1, shuffle=True, num_workers=2)
-
-# sequence_names = trainset['name'].values
-# sequence_labels = trainset['label'].values
-
-
-def gentraindataframe():#防止变量
+def gentraindataframe():
     with open(r'/mnt/raid5/data3/xli/three_work/task1/dlseq/task1_train_pos7594.pkl', 'rb') as f:
         traintposset1 = pickle.load(f)
 
@@ -416,14 +359,11 @@ def gentraindataframe():#防止变量
 
     with open(r'/mnt/raid5/data3/xli/three_work/task1/dlseq_RNA/task1RNA_pos3948.pkl', 'rb') as f2:
         traintnegset2 = pickle.load(f2)
-    
-    # print(traintest.keys())
-    # train_dataframe = pd.DataFrame(traintest)
-    # print(train_dataframe,)
+
     trainposset={}
     trainposset.update(traintposset1)
     
-    # print(trainset['P45771'])
+    
     trainposlist=list(trainposset.keys())
 
     namelist=[]
@@ -431,10 +371,7 @@ def gentraindataframe():#防止变量
     labellist=[]
 
     for i in trainposlist:
-        # seqstr=trainset[i][0]
-        # label=trainset[i][1]
-        # seqlist.append(seqstr)
-        # labellist.append(1)
+        
         namelist.append(i)
         seqlist.append(trainposset[i])
         labellist.append(1)
@@ -453,7 +390,7 @@ def gentraindataframe():#防止变量
     print(train_dataframe)
     return train_dataframe
 
-def gentest474RNAdataframe():#防止变量
+def gentest474RNAdataframe():
     with open(r'/home/xli/NABProt/task1ab/dataft/testdata/test474pos68.pkl', 'rb') as f1:
         testposset1 = pickle.load(f1)
 
@@ -470,7 +407,7 @@ def gentest474RNAdataframe():#防止变量
     testposset={}
     testposset.update(testposset1)
     testposset.update(testposset2)
-    # labelpos=[1 for i in range(183)]
+    
 
     testposlist=list(testposset.keys())
 
@@ -497,10 +434,7 @@ def gentest474RNAdataframe():#防止变量
     return test_dataframe
 
 from sklearn.utils import shuffle
-# trainset=gentraindataframe()
-# trainset=shuffle(trainset)#[:500]
 
-# sequence_names = trainset['name'].values
 
 model=simplemodel()
 
@@ -509,19 +443,18 @@ if torch.cuda.is_available():
 
 
 
-#train_loader = DataLoader(dataset=ProDataset(trainset), batch_size=64, shuffle=True, num_workers=2,drop_last=True)#,drop_last=True
-testset=gentest474RNAdataframe()#gentest474DNAdataframe()
+testset=gentest474RNAdataframe()
 
 test_loader = DataLoader(dataset=ProDataTestset(testset), batch_size=1, shuffle=False, num_workers=2)
 
-#model.load_state_dict(torch.load('/home/xli/NABProt/task1ab/a_retrainmodel/T5/RNA/test/epoch7RNA_new.pkl'))
-model.load_state_dict(torch.load('/home/xli/NABProt/task1ab/a_retrainmodel/T5/RNA/test/RNAmodel/epoch7RNA.pkl'))
+
+model.load_state_dict(torch.load('/home/xli/NABProt/task1ab/a_retrainmodel/T5/RNA/test/RNAmodel/epoch7RNA_new.pkl'))
 
 model.eval()
 epoch_loss_avg, valid_true, valid_pred, _  = evaluate(model, test_loader)
 print(valid_true, valid_pred)
 print('######################################################')
-result_valid = analysis(valid_true, valid_pred)#, 0.5
+result_valid = analysis(valid_true, valid_pred)
 
 print("Valid loss: ", epoch_loss_avg)
 print("Valid binary acc: ", result_valid['binary_acc'])
