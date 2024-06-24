@@ -473,7 +473,7 @@ testset=gentest255RNAdataframe()
 
 test_loader = DataLoader(dataset=ProDataTestset(testset), batch_size=1, shuffle=False, num_workers=2)
 
-model.load_state_dict(torch.load('/home/xli/NABProt/task1ab/a_retrainmodel/T5/RNA/test/RNAmodel/epoch7RNA.pkl'))
+model.load_state_dict(torch.load('/home/xli/NABProt/task1ab/a_retrainmodel/T5/RNA/test/RNAmodel/epoch7RNA_new.pkl'))
 model.eval()    
 epoch_loss_avg, valid_true, valid_pred, _  = evaluate(model, test_loader)
 print(valid_true, valid_pred)
