@@ -30,14 +30,12 @@ class ProDataset(Dataset):
     def __getitem__(self, index):
         sequence_name = self.names[index]
         sequence = self.sequences[index]
-        #label = np.array(self.labels[index])
+        
         label = self.labels[index]
 
-        # sequence_embedding = #embedding(sequence_name, sequence, EMBEDDING)
-        # #structural_features = #get_dssp_features(sequence_name)
+        
         graph = load_graph(sequence_name)
-        # #node_features = np.concatenate([sequence_embedding, structural_features], axis = 1)
-        # #graph = load_graph(sequence_name)
+        
         node_features=np.array(loadembedding(sequence_name))
 
         return sequence_name, sequence, label, node_features, graph
@@ -54,14 +52,13 @@ class ProDataTestset(Dataset):
     def __getitem__(self, index):
         sequence_name = self.names[index]
         sequence = self.sequences[index]
-        #label = np.array(self.labels[index])
+        
         label = self.labels[index]
 
         # sequence_embedding = #embedding(sequence_name, sequence, EMBEDDING)
         # #structural_features = #get_dssp_features(sequence_name)
         graph = load_graph_test(sequence_name)
-        # #node_features = np.concatenate([sequence_embedding, structural_features], axis = 1)
-        # #graph = load_graph(sequence_name)
+        
         node_features=np.array(loadtestembedding(sequence_name))
 
         return sequence_name, sequence, label, node_features, graph
@@ -93,7 +90,7 @@ class net_prot_gat(nn.Module):
             x = self.relu(self.linear0[l](x))
             x = self.relu(self.linear1[l](x))
 
-            # x += x0
+           
             x = x+x0
 
         x = self.linear_final(x)
@@ -119,25 +116,25 @@ class simplemodel(nn.Module):
                                         nn.Linear(32, 2))
 
         self.criterion = nn.CrossEntropyLoss()
-        #self.optimizer = torch.optim.SGD(self.parameters(),lr=0.001)
+        
         self.optimizer = torch.optim.Adam(self.parameters(),lr=0.001) 
            
-    def forward(self,x,adj):#x:(b,len,fea_len)
+    def forward(self,x,adj):
         
-        outputlstm,(h,c)=self.lstm(x)#x:(b,len,fea1024);output:(b,len,fea256)
+        outputlstm,(h,c)=self.lstm(x)
         x=self.fc1(x)
         outputgat=self.gat(x,adj)
-        #print(outputgat.shape)
+        
         output=torch.cat([outputlstm,outputgat],dim=2)
 
-        output=torch.mean(output,dim=1)#output:(64,256)
+        output=torch.mean(output,dim=1)
         x=self.fc(output)
         return x
 
 
 
 
-def norm_dis(mx): # from SPROF
+def norm_dis(mx): 
     return 2 / (1 + (np.maximum(mx, 4) / 4))
 
 def normalize(mx):
@@ -150,34 +147,28 @@ def normalize(mx):
 
 
 
-def padded_adj(original_matrix):#输入是（103，103）
-    #original_matrix = np.zeros((103, 103))
+def padded_adj(original_matrix):
+    
     dim=original_matrix.shape[0]
-    # 创建一个512x512的零矩阵
+    
     if dim >=512:
         return original_matrix[:512,:512]
     else:
         padded_matrix = np.zeros((512, 512))
 
-    # 将原始矩阵的值复制到新的矩阵中
-        padded_matrix[:dim, :dim] = original_matrix
-
-    # 打印结果
-    # print(padded_matrix)
+    
         return padded_matrix
 
 
 def load_graph(sequence_name):
 
     
-#    #dismap = np.load(Feature_Path + "distance_map/" + sequence_name + ".npy") 
+
     dismap = np.load( "/mnt/raid5/data3/xli/three_work/task1/distrain_DNA/" + sequence_name + ".npy")
     mask = ((dismap >= 0) * (dismap <= 14))
     
     adjacency_matrix = mask.astype(np.int)
-    # elif MAP_TYPE == "c":
-    #     adjacency_matrix = norm_dis(dismap)
-    #     adjacency_matrix = mask * adjacency_matrix
+    
 
     norm_matrix = normalize(adjacency_matrix.astype(np.float32))
     norm_matrix=padded_adj(norm_matrix).astype(np.float32)
@@ -186,16 +177,13 @@ def load_graph(sequence_name):
 def load_graph_test(sequence_name):
 
     
-#    #dismap = np.load(Feature_Path + "distance_map/" + sequence_name + ".npy") 
+
     dismap = np.load( "/home/xli/NABProt/task1ab/tomato_prot/dist/RNAdist/" + sequence_name + ".npy")
     mask = ((dismap >= 0) * (dismap <= 14))
     mask = ((dismap >= 0) * (dismap <= 14))
     
     adjacency_matrix = mask.astype(np.int)
-    # elif MAP_TYPE == "c":
-    #     adjacency_matrix = norm_dis(dismap)
-    #     adjacency_matrix = mask * adjacency_matrix
-
+   
     norm_matrix = normalize(adjacency_matrix.astype(np.float32))
     norm_matrix=padded_adj(norm_matrix).astype(np.float32)
     return norm_matrix
@@ -229,29 +217,13 @@ def train_one_epoch(model, data_loader):
     epoch_loss_train=0
     for data in data_loader:
         model.optimizer.zero_grad()
-        # optimizer.zero_grad()
+       
         
         name,_,label, node_features, graph=data
 
-        # namelist=list(name)
-
-        # print(seq)#元组
-        # seqlist=list(seq)
-        # seqlist=[genstr(seq) for seq in seqlist]
-
-        # seq=np.array(seq)
-        # seq=torch.from_numpy(seq)
-        # seq=to_var(seq)
-        # label=to_var(label)#(64,514,1024)的张量截取（64，512，1024）
-
-        # embedding = embeddingfea(namelist)
-        # embedding = np.array(embedding)
+        
         embedding=node_features
-        #embedding=torch.from_numpy(embedding)
-
-        #embedding=torch.squeeze(embedding)#????????
-
-        #embedding=embedding[:,1:-1,:]#获得（batch,512,1024）
+       
         embedding=torch.tensor(embedding,dtype=torch.float)
         embedding=to_var(embedding)
 
@@ -271,7 +243,7 @@ def train_one_epoch(model, data_loader):
         n += 1
 
     epoch_loss_train_avg = epoch_loss_train / n
-    # print(epoch_loss_train_avg)
+    
     return epoch_loss_train_avg
 
 
@@ -289,9 +261,7 @@ def evaluate(model, data_loader):
     for data in data_loader:
         with torch.no_grad():
             name,_,label, node_features, graph=data
-            # namelist=list(name)
-
-            #embedding = embeddingfea(namelist)
+            
             embedding=node_features
             embedding=torch.tensor(embedding,dtype=torch.float)
             embedding=to_var(embedding)
@@ -337,7 +307,7 @@ def analysis(y_true, y_pred, best_threshold = None):
 
     binary_pred = [1 if pred >= best_threshold else 0 for pred in y_pred]
     binary_true = y_true
-    # binary evaluate
+   
     binary_acc = metrics.accuracy_score(binary_true, binary_pred)
     precision = metrics.precision_score(binary_true, binary_pred)
     recall = metrics.recall_score(binary_true, binary_pred)
@@ -359,95 +329,10 @@ def analysis(y_true, y_pred, best_threshold = None):
     }
     return results
 
-# LAYER = 8#8
-# INPUT_DIM = 1024
-# HIDDEN_DIM = 256
-# NUM_CLASSES = 2
-# DROPOUT = 0.1#0.1
-# LAMBDA = 1.5
-# ALPHA = 0.7
-# VARIANT = True
-# LEARNING_RATE = 1E-5
-# WEIGHT_DECAY = 0
 
 
 
 
-
-
-
-
-# trainset=pd.read_csv('/mnt/raid5/data3/xli/three_work/task3/new_train.csv')
-# trainset['label'] = trainset['label'].replace(-1, 0)
-# #train_loader = DataLoader(dataset=ProDataset(trainset), batch_size=1, shuffle=True, num_workers=2)
-
-# sequence_names = trainset['name'].values
-# sequence_labels = trainset['label'].values
-
-
-# def gentraindataframe():#防止变量
-#     with open(r'/mnt/raid5/data3/xli/three_work/task1/dlseq/task1_train_pos7594.pkl', 'rb') as f:
-#         traintposset = pickle.load(f)
-
-#     with open(r'/mnt/raid5/data3/xli/three_work/task1/dlseq/task1_train_neg10188.pkl', 'rb') as f1:
-#         traintnegset = pickle.load(f1)
-#     # print(traintest.keys())
-#     # train_dataframe = pd.DataFrame(traintest)
-#     # print(train_dataframe,)
-#     trainset={}
-#     trainset.update(traintposset)
-#     trainset.update(traintnegset)
-#     # print(trainset['P45771'])
-#     trainlist=list(trainset.keys())
-#     seqlist=[]
-#     labellist=[]
-#     for i in trainlist:
-#         seqstr=trainset[i][0]
-#         label=trainset[i][1]
-#         seqlist.append(seqstr)
-#         labellist.append(label)
-
-#     traindict={'name':trainlist,'seq':seqlist,'label':labellist}
-#     train_dataframe = pd.DataFrame(traindict)
-#     # print(train_dataframe)
-#     return train_dataframe
-
-
-# def gentestdataframe():#防止变量
-#     with open(r'/mnt/raid5/data3/xli/three_work/task1/dlseq/test474/test474pos175.pkl', 'rb') as f1:
-#         testposset1 = pickle.load(f1)
-
-#     with open(r'/mnt/raid5/data3/xli/three_work/task1/dlseq/test474/test474pos8.pkl', 'rb') as f2:
-#         testposset2 = pickle.load(f2)
-
-#     with open(r'/mnt/raid5/data3/xli/three_work/task1/dlseq/test474/test474neg223.pkl', 'rb') as f3:
-#         testnegset = pickle.load(f3)
-
-#     testposset={}
-#     testposset.update(testposset1)
-#     testposset.update(testposset2)
-#     # labelpos=[1 for i in range(183)]
-
-#     testposlist=list(testposset.keys())
-
-#     namelist=[]
-#     seqlist=[]
-#     labellist=[]
-#     for i in testposlist:
-#         namelist.append(i)
-#         seqlist.append(testposset[i])
-#         labellist.append(1)
-    
-#     testneglist=list(testnegset.keys())
-#     for j in testneglist:
-#         namelist.append(j)
-#         seqlist.append(testnegset[j])
-#         labellist.append(0)
-#     testdict={'name':namelist,'seq':seqlist,'label':labellist}
-#     test_dataframe = pd.DataFrame(testdict)
-#     # print(train_dataframe)
-#     return test_dataframe
-#######################################################################
 def getRNA171list():
     namelist=[]
     seqlist=[]
@@ -458,27 +343,13 @@ def getRNA171list():
                 namelist.append(line[1:-1])
             else:
                 seqlist.append(line[:-1])
-    # print(namelist)
-    # print(seqlist)
+ 
     return namelist,seqlist
 
-def genRNA171dataframe():#防止变量
-    # with open(r'/mnt/raid5/data3/xli/three_work/task1/dlseq/test474/test255pos93.pkl', 'rb') as f1:
-    #     testposset1 = pickle.load(f1)
-
-    # with open(r'/mnt/raid5/data3/xli/three_work/task1/dlseq/test474/test474pos8.pkl', 'rb') as f2:
-    #     testposset2 = pickle.load(f2)
-
-    # with open(r'/mnt/raid5/data3/xli/three_work/task1/dlseq/test474/test255neg92.pkl', 'rb') as f3:
-    #     testnegset = pickle.load(f3)
+def genRNA171dataframe():
     RNAnames,RNAseqs=getRNA171list()
 
-    # testposset={}
-    # testposset.update(testposset1)
-    # testposset.update(testposset2)
-    # labelpos=[1 for i in range(183)]
-
-    # testposlist=list(testnegset.keys())
+    
 
     namelist=[]
     seqlist=[]
@@ -489,16 +360,12 @@ def genRNA171dataframe():#防止变量
         seqlist.append(RNAseqs[i])
         labellist.append(1)
     
-    # testneglist=list(testnegset.keys())
-    # for j in testneglist:
-    #     namelist.append(j[1:])
-    #     seqlist.append(testnegset[j])
-    #     labellist.append(0)
+    
 
 
     testdict={'name':namelist,'seq':seqlist,'label':labellist}
     test_dataframe = pd.DataFrame(testdict)
-    # print(train_dataframe)
+    
     return test_dataframe
 #######################################################################
 
@@ -509,15 +376,11 @@ if torch.cuda.is_available():
 
 
 from sklearn.utils import shuffle
-#trainset=gentraindataframe()
 
-#trainset=shuffle(trainset)#[:300]
 testset=genRNA171dataframe()
 
 
-# sequence_names = trainset['name'].values
 
-#train_loader = DataLoader(dataset=ProDataset(trainset), batch_size=64, shuffle=True, num_workers=2,drop_last=True)#,drop_last=True
 test_loader = DataLoader(dataset=ProDataTestset(testset), batch_size=1, shuffle=False, num_workers=2)
 
 
@@ -527,39 +390,5 @@ epoch_loss_avg, valid_true, valid_pred, _  = evaluate(model, test_loader)
     # print('evl_loss',epoch_loss_avg)
 
 print(valid_true, valid_pred)
-print('######################################################')
-# result_valid = analysis(valid_true, valid_pred, 0.5)
 
-# print("Valid loss: ", epoch_loss_avg)
-# print("Valid binary acc: ", result_valid['binary_acc'])
-# print("Valid precision: ", result_valid['precision'])
-# print("Valid recall: ", result_valid['recall'])
-# print("Valid f1: ", result_valid['f1'])
-# print("Valid AUC: ", result_valid['AUC'])
-# print("Valid AUPRC: ", result_valid['AUPRC'])
-# print("Valid mcc: ", result_valid['mcc'])
-"""
-for epoch in range(10):
-    print("\n========== test epoch " + str(epoch + 1) + " ==========")
-    model.train()
-    epoch_loss_train_avg = train_one_epoch(model, train_loader)
-    print('train_loss',epoch_loss_train_avg)
-
-    epoch_loss_avg, valid_true, valid_pred, _  = evaluate(model, test_loader)
-    # print('evl_loss',epoch_loss_avg)
-    result_valid = analysis(valid_true, valid_pred, 0.5)
-
-    print("Valid loss: ", epoch_loss_avg)
-    print("Valid binary acc: ", result_valid['binary_acc'])
-    print("Valid precision: ", result_valid['precision'])
-    print("Valid recall: ", result_valid['recall'])
-    print("Valid f1: ", result_valid['f1'])
-    print("Valid AUC: ", result_valid['AUC'])
-    print("Valid AUPRC: ", result_valid['AUPRC'])
-    print("Valid mcc: ", result_valid['mcc'])
-
-    if epoch==6:
-        torch.save(model.state_dict(),'epoch7DNA.pkl')
-
-"""
 
